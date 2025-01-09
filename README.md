@@ -10,3 +10,6 @@ GDMF包含了对于数据的处理和模型的调用
 GMDF为五折交叉实验内容
 
 tools为具体的模型实现代码
+
+本文部分代码引用自论文
+Weighted deep factorizing heterogeneous molecular network for genome-phenome association prediction
