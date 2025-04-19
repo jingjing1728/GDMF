@@ -41,12 +41,10 @@ class cross_validation(object):
 
         input_data = data_generator.input_data()
 
-        # 计算特征维度
         gene_feature_dim = input_data.X_1_1.shape[1] + input_data.X_1_2.shape[1] + input_data.X_1_3.shape[1]
         mirna_feature_dim = input_data.X_2_1.shape[1]
         phenotype_feature_dim = input_data.X_4_1.shape[1] + input_data.X_4_2.shape[1]
 
-        # 确保特征维度被正确设置
         self.gene_feature_dim = gene_feature_dim
         self.mirna_feature_dim = mirna_feature_dim
         self.phenotype_feature_dim = phenotype_feature_dim
@@ -71,7 +69,6 @@ class cross_validation(object):
 
         self.gene_num = self.R_X_dict['R_1_4'].shape[0]
 
-        # 得到层号
         lay_id = set()
         for k in self.R_X_dict:
             if (re.split("_", k)[0] == 'R'):
@@ -83,7 +80,6 @@ class cross_validation(object):
                     lay_id.add(layer1)
                     lay_id.add(layer2)
 
-        # 初始化Gi    GiUt
         G_input_dict = {}
         G_ini_dict = {}
         GiUt_ini_dict = {}
@@ -123,9 +119,6 @@ class cross_validation(object):
                         # GiUt_ini_dict['G' + i + 'U' + layer_t] = np.ones((self.R_X_dict[k].shape[1], self.args.ini_d))
                         GiUt_ini_dict['G' + i + 'U' + layer_t] = np.matmul(np.linalg.inv(G_ini_dict['G' + i][:self.args.ini_d]), self.R_X_dict[k][:self.args.ini_d]).T
 
-
-
-        # 假设所有数据都已经加载到NumPy数组中
         R_1_1 = np.load(r"D:\Data_deal\data_dealing\data\ppi.npy")
         R_2_2 = np.load(r"D:\Data_deal\data_dealing\data\miRNA_miRNA.npy")
         print(R_2_2.size - np.count_nonzero(R_2_2))
@@ -148,7 +141,7 @@ class cross_validation(object):
         X_4_1 = np.load(r"D:\Data_deal\data_dealing\data\TO_feature_embedding.npy")
         X_4_3 = np.load(r"D:\Data_deal\pythonProject\yuyi_denoised_similarity_matrix_pytorch.npy")
 
-        # 将NumPy数组转换为PyTorch张量
+
         R_1_1_tensor = torch.from_numpy(R_1_1)
         R_2_2_tensor = torch.from_numpy(R_2_2)
         R_4_4_tensor = torch.from_numpy(R_4_4)
@@ -169,61 +162,30 @@ class cross_validation(object):
         TO_features = torch.cat((X_4_1_tensor, X_4_2_tensor, X_4_3_tensor), dim=1)
         print(TO_features.shape)
 
-        # 创建异构图数据对象
         data = HeteroData()
 
         data['gene'].x = gene_features
         data['miRNA'].x = miRNA_features
         data['TO'].x = TO_features
 
-        # 将 R_1_2 转换为边索引
         row_indices, col_indices = R_1_2.nonzero()
-
-        # 将 NumPy 数组转换为 PyTorch 张量
         edge_index_g2m = torch.tensor([row_indices, col_indices], dtype=torch.long)
-
-        # 添加边索引到数据对象
         data['gene', 'regulated_by', 'mirna'].edge_index = edge_index_g2m
-
-        # 将 R_1_3 转换为边索引
         row_indices, col_indices = R_1_3.nonzero()
-
-        # 将 NumPy 数组转换为 PyTorch 张量
         edge_index_g2p = torch.tensor([row_indices, col_indices], dtype=torch.long)
-
-        # 添加边索引到数据对象
         data['gene', 'regulated_by', 'pathway'].edge_index = edge_index_g2p
-
-        # 将 R_1_4 转换为边索引
         row_indices, col_indices = R_1_4.nonzero()
-
-        # 将 NumPy 数组转换为 PyTorch 张量
         edge_index_g2t = torch.tensor([row_indices, col_indices], dtype=torch.long)
-
-        # 添加边索引到数据对象
         data['gene', 'regulated_by', 'TO'].edge_index = edge_index_g2t
-
-        # 将 R_2_4 转换为边索引
         row_indices, col_indices = R_2_4.nonzero()
-
-        # 将 NumPy 数组转换为 PyTorch 张量
         edge_index_M2t = torch.tensor([row_indices, col_indices], dtype=torch.long)
-
-        # 添加边索引到数据对象
         data['mirna', 'regulated_by', 'TO'].edge_index = edge_index_M2t
-
-        # 假设R_2_2是miRNA的相似性矩阵，R_4_4是TO的层次结构矩阵
-        # 将相似性矩阵和层次结构矩阵转换为边索引
         edge_index_miRNA_miRNA = torch.tensor(np.nonzero(R_2_2), dtype=torch.long)
         edge_index_TO_TO = torch.tensor(np.nonzero(R_4_4), dtype=torch.long)
-
         edge_index_gene_gene = torch.tensor(np.nonzero(R_2_2), dtype=torch.long)
         data['gene', 'similar_to', 'gene'].edge_index = edge_index_gene_gene
-
-        # 添加边索引
         data['mirna', 'similar_to', 'mirna'].edge_index = edge_index_miRNA_miRNA
         data['TO', 'is_a', 'TO'].edge_index = edge_index_TO_TO
-
         edge_index_TO_TO_sem_sim = torch.tensor(np.nonzero(X_4_3), dtype=torch.long)
         data['TO', 'similar_to', 'TO'].edge_index = edge_index_TO_TO_sem_sim
 
@@ -287,9 +249,6 @@ class cross_validation(object):
 
 
     def get_cross_validation(self):
-
-        # 把R_X_dict中的R14分解成fold份    每份喂给model
-
         seed = 1
         np.random.seed(seed)
 
