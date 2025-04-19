@@ -34,14 +34,14 @@ class HeteroGAT(torch.nn.Module):
         # 737
         self.gene_conv2 = GATConv(256 * 4, 256, dropout=0.2)
         self.gene_pathway_conv = GATConv(256, 256, dropout=0.2)
-        self.gene_miRNA_conv = GATConv(256, 256, dropout=0.2)  # 输入特征维度与 conv2 的输出特征维度相匹配
+        self.gene_miRNA_conv = GATConv(256, 256, dropout=0.2)  
         self.gene_TO_conv = GATConv(256, 256, dropout=0.2)
         # self.conv_mirna_features = GATConv(mirna_feature_dim, 256, dropout=0.2)
         # self.conv_phenotype_features = GATConv(phenotype_feature_dim, 256, dropout=0.2)
 
         self.miRNA_conv1 = GATConv(mirna_feature_dim, 128, heads=8, dropout=0.2)
         self.miRNA_conv2 = GATConv(128 * 8, 128, dropout=0.2)
-        self.miRNA_gene_conv = GATConv(128, 128, dropout=0.2)  # 输入特征维度与 conv2 的输出特征维度相匹配
+        self.miRNA_gene_conv = GATConv(128, 128, dropout=0.2) 
         self.miRNA_TO_conv = GATConv(128, 128, dropout=0.2)
         # self.conv_mirna_features = GATConv(mirna_feature_dim, 128, dropout=0.2)
         # self.conv_phenotype_features = GATConv(phenotype_feature_dim, 128, dropout=0.2)
@@ -50,12 +50,12 @@ class HeteroGAT(torch.nn.Module):
         # 283
         self.TO_conv2 = GATConv(256 * 4, 128, dropout=0.2)
         self.TO_conv3 = GATConv(128, 128, dropout=0.2)
-        self.TO_gene_conv = GATConv(128, 128, dropout=0.2)  # 输入特征维度与 conv2 的输出特征维度相匹配
+        self.TO_gene_conv = GATConv(128, 128, dropout=0.2)  
         self.TO_miRNA_conv = GATConv(128, 128, dropout=0.2)
         # self.conv_mirna_features = GATConv(mirna_feature_dim, 256, dropout=0.2)
         # self.conv_phenotype_features = GATConv(phenotype_feature_dim, 256, dropout=0.2)
 
-        self.fc = nn.Linear(256, 128)  # 输出层，将特征维度转换为128
+        self.fc = nn.Linear(256, 128) 
 
 
     def init_weights(self):
@@ -71,26 +71,17 @@ class HeteroGAT(torch.nn.Module):
                     nn.init.kaiming_uniform_(m.att.data, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x, edge_index_dict):
-        # 使用基因之间的边进行卷积
         gene_x = self.gene_conv1(x['gene'], edge_index_dict[('gene', 'similar_to', 'gene')])
-        gene_x = F.elu(gene_x)  # 使用LeakyReLU激活函数
+        gene_x = F.elu(gene_x)  
         gene_x = F.dropout(gene_x, p=0.5, training=self.training)
         gene_x = self.gene_conv2(gene_x, edge_index_dict[('gene', 'similar_to', 'gene')])
-
-        # 融合pathway数据
         gene_x = self.gene_pathway_conv(gene_x, edge_index_dict[('gene', 'regulated_by', 'pathway')])
         gene_x = F.elu(gene_x)
-
-        # 融合miRNA数据
-        gene_x = self.gene_miRNA_conv(gene_x, edge_index_dict[('gene', 'regulated_by', 'mirna')])  # 使用基因特征和miRNA边
+        gene_x = self.gene_miRNA_conv(gene_x, edge_index_dict[('gene', 'regulated_by', 'mirna')])  
         gene_x = F.elu(gene_x)
-
-        # 融合表型数据
         gene_x = self.gene_TO_conv(gene_x,
-                                   edge_index_dict[('gene', 'regulated_by', 'TO')])  # 使用融合后的基因和miRNA特征以及表型边
+                                   edge_index_dict[('gene', 'regulated_by', 'TO')])  
         gene_x = F.elu(gene_x)
-
-        # 通过全连接层将特征维度转换为128
         gene_x = self.fc(gene_x)
 
         miRNA_x = self.miRNA_conv1(x['miRNA'], edge_index_dict[('mirna', 'similar_to', 'mirna')])
@@ -98,16 +89,11 @@ class HeteroGAT(torch.nn.Module):
         miRNA_x = F.dropout(miRNA_x, p=0.5, training=self.training)
         miRNA_x = self.miRNA_conv2(miRNA_x, edge_index_dict[('mirna', 'similar_to', 'mirna')])
 
-        # 融合基因数据
-        miRNA_x = self.miRNA_gene_conv(miRNA_x, edge_index_dict[('gene', 'regulated_by', 'mirna')])  # 使用基因特征和miRNA边
+        miRNA_x = self.miRNA_gene_conv(miRNA_x, edge_index_dict[('gene', 'regulated_by', 'mirna')]) 
         miRNA_x = F.elu(miRNA_x)
 
-        # 融合表型数据
         miRNA_x = self.miRNA_TO_conv(miRNA_x,
-                                     edge_index_dict[('mirna', 'regulated_by', 'TO')])  # 使用融合后的基因和miRNA特征以及表型边
-        miRNA_x = F.elu(miRNA_x)
-
-        # # 通过全连接层将特征维度转换为128
+                                     edge_index_dict[('mirna', 'regulated_by', 'TO')]) 
         # miRNA_x = self.fc2(miRNA_x)
 
         TO_x = self.TO_conv1(x['TO'], edge_index_dict[('TO', 'is_a', 'TO')])
@@ -115,16 +101,12 @@ class HeteroGAT(torch.nn.Module):
         TO_x = F.dropout(TO_x, p=0.5, training=self.training)
         TO_x = self.TO_conv2(TO_x, edge_index_dict[('TO', 'is_a', 'TO')])
 
-        # 融合基因数据
-        TO_x = self.TO_gene_conv(TO_x, edge_index_dict[('gene', 'regulated_by', 'TO')])  # 使用基因特征和miRNA边
+        TO_x = self.TO_gene_conv(TO_x, edge_index_dict[('gene', 'regulated_by', 'TO')])  
         TO_x = F.elu(TO_x)
 
-        # 融合miRNA数据
         TO_x = self.TO_miRNA_conv(TO_x,
-                                  edge_index_dict[('mirna', 'regulated_by', 'TO')])  # 使用融合后的基因和miRNA特征以及表型边
+                                  edge_index_dict[('mirna', 'regulated_by', 'TO')])
         TO_x = F.elu(TO_x)
-
-        # # 通过全连接层将特征维度转换为128
         # TO_x = self.fc2(TO_x)
 
         return gene_x,miRNA_x,TO_x
@@ -180,10 +162,9 @@ class WDGPA(nn.Module):
                 self.data.x_dict, self.data.edge_index_dict
             )
 
-            # 将嵌入赋值给G_ini_dict
-            G_ini_dict['G1'] = gene_embeddings  # 基因嵌入
+            G_ini_dict['G1'] = gene_embeddings  
             G_ini_dict['G2'] = miRNA_embeddings
-            G_ini_dict['G4'] = TO_embeddings  # TO嵌入
+            G_ini_dict['G4'] = TO_embeddings  
 
         G_output_dict['G1'] = self.Layer_1_1_run(G_ini_dict['G1'])
         G_output_dict['G1'] = self.act(G_output_dict['G1'])
@@ -238,7 +219,6 @@ class WDGPA(nn.Module):
 
 
 def get_evaluation_metrics(prediction_score, Y, wr_list):
-    # 经验证，此函数没有问题
     IC = np.zeros((155, 1))
     # Y = (np.abs(Y) + Y) / 2
     m = Y.shape[0]
